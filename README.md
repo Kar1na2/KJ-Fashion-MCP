@@ -34,3 +34,8 @@ Scanned image → object storage (Bronze)
 MCP query tool → hits Gold aggregates → returns trend
 
 Vite will also be my frontend just because of it's simplicity in setting up and fast deployment
+
+## Things to be worked on 
+
+- Adding in Pro Club 
+- Refining Levi's Jean Inventory list and populating with pre-existing data to make it impactful

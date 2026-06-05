@@ -68,6 +68,11 @@ app.post("/api/confirm", async (req, res) => {
             return res.status(400).json({ error: "scan_id and cells[] are required" });
         }
 
+        const iso = body.sheet_date;
+        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso) || isNaN(Date.parse(iso))) {
+            return res.status(400).json({ error: "A valid sheet_date (YYYY-MM-DD) is required" });
+        }
+
         const stored = await confirmScan(body);
         res.json({ ok: true, rows_stored: stored });
     } catch (err) {

@@ -22,9 +22,41 @@ function masthead(sub: string): string {
     `;
 }
 
+function toIsoDate(month: number, day: number, year: number): string | null {
+    if (!month || !day || !year) return null;
+    if (month < 1 || month > 12) return null;
+    if (year < 2020 || year > 2099) return null;
+
+    const d = new Date(year, month - 1, day);
+    if (
+        d.getFullYear() !== year ||
+        d.getMonth() !== month - 1 ||
+        d.getDate() !== day
+    ) {
+        return null;
+    }
+
+    const mm = String(month).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
+    return `${year}-${mm}-${dd}`;
+}
+
 async function confirm() {
     const secList = (window as any)._secList;
     const cells: InventoryCell[] = [];
+
+    const month = Number((document.querySelector("#m-month") as HTMLInputElement).value);
+    const day = Number((document.querySelector("#m-day") as HTMLInputElement).value);
+    const year = Number((document.querySelector("#m-year") as HTMLInputElement).value);
+
+    const isoDate = toIsoDate(month, day, year);
+    const errEl = document.querySelector("#date-error")!;
+
+    if (!isoDate) {
+        errEl.textContent = "Enter a valid date (MM DD YYYY) before confirming.";
+        return;
+    }
+    errEl.textContent = "";
 
     document.querySelectorAll<HTMLInputElement>("table input").forEach((inp) => {
         const v = inp.value.trim();
@@ -42,7 +74,7 @@ async function confirm() {
 
     const body: ConfirmRequest = {
         scan_id: current!.scan_id,
-        sheet_date: current!.extraction.sheet_date,
+        sheet_date: isoDate,
         fashion_line: current!.extraction.fashion_line,
         operator: current!.extraction.operator,
         cells,
@@ -153,6 +185,16 @@ function renderReview() {
             <div class="legend">
                 <span class="swatch"></span>
                 Flagged cells fell below model confidence — verify before storing.
+            </div>
+            <div class="date-entry">
+                <label>Inventory date (required):</label>
+                <input id="m-month" type="number" min="1" max="12" placeholder="MM"
+                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(5, 7)) : ""}" />
+                <input id="m-day" type="number" min="1" max="31" placeholder="DD"
+                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(8, 10)) : ""}" />
+                <input id="m-year" type="number" min="2020" max="2099" placeholder="YYYY"
+                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(0, 4)) : ""}" />
+                <span id="date-error" class="date-error"></span>
             </div>
             <div class="actions">
                 <button class="primary" id="confirm">Confirm &amp; Store</button>

@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { getYearlyTrend, getStyleHistory, listStyles } from "./queries.js";
+import { exit } from 'node:process';
 
 const server = new McpServer({
     name: "illb-inventory",
@@ -65,5 +66,5 @@ async function main() {
 
 main().catch((err) => {
     console.error("[mcp] fatal:", err);
-    process.exit(1);
+    exit(1);
 });

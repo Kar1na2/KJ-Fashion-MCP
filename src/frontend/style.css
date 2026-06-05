@@ -331,6 +331,51 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .success .detail b { color: var(--ink); }
 .success .actions { justify-content: center; }
 
+/* ---------- Date entry ---------- */
+.date-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem;
+  margin: 0 0 1.4rem;
+}
+.date-entry label {
+  font-family: var(--font-data);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: .76rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.date-entry input {
+  width: 4.2rem;
+  font-family: var(--font-data);
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  background: #fbf8f1;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: .4rem .3rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+.date-entry input:focus {
+  outline: none;
+  border-color: var(--oxblood);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(122,35,48,.12);
+}
+.date-entry input#m-year { width: 5.4rem; }
+.date-error {
+  font-family: var(--font-data);
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--flag-border);
+  flex-basis: 100%;
+  min-height: 1rem;
+}
+
 /* ---------- Animations ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes pop  { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
