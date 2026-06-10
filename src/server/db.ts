@@ -21,7 +21,7 @@ export async function initDb(): Promise<void> {
 // BRONZE
 
 export async function insertBronze(
-    scanId: string, 
+    scanId: string,
     sourceImage: string
 ): Promise<void> {
     const db = getDb();
@@ -81,8 +81,6 @@ export async function confirmScan(
 
 // GOLD
 
-// QUERIES
-
 function clean(rows: Record<string, unknown>[]): Record<string, unknown>[] {
     return rows.map((row) => {
         const out: Record<string, unknown> = {};
@@ -94,6 +92,32 @@ function clean(rows: Record<string, unknown>[]): Record<string, unknown>[] {
         }
         return out;
     });
+}
+
+export async function getWeeklyTrend(start_date: string, end_date: string) {
+    const c = getDb();
+    const reader = await c.runAndReadAll(
+        `SELECT sheet_date, style_code, color, SUM(quantity) AS qty
+            FROM silver_inventory
+        WHERE sheet_date BETWEEN $start AND $end
+        GROUP BY 1, 2, 3
+        ORDER BY sheet_date, style_code, color`,
+        { start: start_date, end: end_date }
+    );
+    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+}
+
+export async function getMonthlyTrend(year: number, month: number) {
+    const c = getDb();
+    const reader = await c.runAndReadAll(
+        `SELECT month, style_code, color, SUM(total_qty) AS qty
+            FROM gold_monthly
+        WHERE year(month) = $yr AND month(month) = $mo
+        GROUP BY 1, 2, 3
+        ORDER BY style_code, color`,
+        { yr: year, mo: month }
+    );
+    return clean(reader.getRowObjects() as Record<string, unknown>[]);
 }
 
 export async function getYearlyTrend(year: number) {

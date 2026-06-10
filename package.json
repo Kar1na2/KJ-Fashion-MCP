@@ -9,7 +9,8 @@
     "dev:frontend": "vite",
     "mcp": "npx tsx src/mcp/server.ts",
     "mcp:inspect": "npx @modelcontextprotocol/inspector npx tsx src/mcp/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\""
   },
   "author": "Kar1na2",
   "license": "ISC",

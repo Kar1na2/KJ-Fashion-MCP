@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { nanoid } from "nanoid";
-import { initDb, insertBronze, confirmScan, getDb, getYearlyTrend, getStyleHistory, listStyles } from "./db.js";
+import { initDb, insertBronze, confirmScan, getDb, getWeeklyTrend, getMonthlyTrend, getYearlyTrend, getStyleHistory, listStyles } from "./db.js";
 import "dotenv/config";
 import { extractSheet, testClaude } from "./extractor.js";
 import type { ConfirmRequest } from "../shared.js";
@@ -91,6 +91,28 @@ app.get("/api/scans", async (req, res) => {
         ));
     }
     res.json(fix(reader.getRowObjects()));
+});
+
+app.get("/api/trend/weekly", async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        if (!start_date || !end_date) return res.status(400).json({ error: "start_date and end_date query params required" });
+        res.json(await getWeeklyTrend(start_date as string, end_date as string));
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+app.get("/api/trend/monthly/:year/:month", async (req, res) => {
+    try {
+        const year = Number(req.params.year);
+        const month = Number(req.params.month);
+        if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12)
+            return res.status(400).json({ error: "year and month (1-12) must be valid numbers" });
+        res.json(await getMonthlyTrend(year, month));
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
 
 app.get("/api/trend/:year", async (req, res) => {
