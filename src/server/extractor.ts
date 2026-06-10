@@ -24,22 +24,27 @@ RULES:
 
 Return ONLY valid JSON — no markdown, no backticks, no explanation. Exactly this shape:
 {
-  "sheet_date": "YYYY-MM-DD" or null,
-  "fashion_line": "K.J. Fashion" or "L.B. Fashion" or null,
-  "operator": string or null,
-  "cells": [
-    { "style_code": "5141325", "color": "D. Blue", "waist": 30, "inseam": 30, "quantity": 3, "confidence": 0.95 }
-  ],
-  "notes": "anything you flagged as unclear, or null"
+  "sheet_date": null,
+  "fashion_line": "L.B. Fashion",
+  "sections": [
+    {
+      "style_code": "5141325",
+      "color": "D. Blue",
+      "cells": [
+        { "waist": 30, "inseam": 30, "quantity": 3, "confidence": 0.95 },
+        { "waist": 32, "inseam": 30, "quantity": 2, "confidence": 0.95 }
+      ]
+    }
+  ]
 }`;
 
 export async function extractSheet(
-    imageBase64: string, 
+    imageBase64: string,
     mediaType: "image/jpeg" | "image/png"
 ): Promise<ExtractionResult> {
     const msg = await client.messages.create({
         model: "claude-opus-4-8",
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: SYSTEM_PROMPT,
         messages: [
             {
@@ -60,6 +65,13 @@ export async function extractSheet(
 
     const block = msg.content[0];
     const raw = block.type === "text" ? block.text : "";
+
+    console.error(`[extract] stop_reason=${msg.stop_reason}, raw length=${raw.length}`);
+    console.error("[extract] raw response:\n", raw);
+
+    if (msg.stop_reason === "max_tokens") {
+        throw new Error("Claude response was truncated (hit max_tokens) — increase max_tokens or simplify the sheet");
+    }
 
     const cleaned = raw.replace(/```json\s*|\s*```/g, "").trim();
 
