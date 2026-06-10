@@ -1,5 +1,5 @@
 import "./style.css";
-import type { ExtractionResult, InventoryCell, ConfirmRequest } from "../shared";
+import type { ExtractionResult, ExtractionSection, InventoryCell, ConfirmRequest } from "../shared";
 
 interface ExtractResponse {
     ok: boolean;
@@ -20,6 +20,23 @@ function masthead(sub: string): string {
             <span class="sub">${sub}</span>
         </header>
     `;
+}
+
+function flattenSections(ex: ExtractionResult): InventoryCell[] {
+    const flat: InventoryCell[] = [];
+    for (const section of ex.sections ?? []) {
+        for (const c of section.cells) {
+            flat.push({
+                style_code: section.style_code,
+                color: section.color,
+                waist: c.waist,
+                inseam: c.inseam,
+                quantity: c.quantity,
+                confidence: c.confidence,
+            });
+        }
+    }
+    return flat;
 }
 
 function toIsoDate(month: number, day: number, year: number): string | null {
@@ -133,18 +150,20 @@ function renderSuccess(rowsStored: number, line: string | null) {
 
 function renderReview() {
     const ex = current!.extraction;
+    const cells = flattenSections(ex);
 
     const sections = new Map<string, { style: string | null; color: string | null; cells: any[] }>();
-    for (const c of ex.cells) {
+    for (const c of cells) {
         const key = `${c.style_code}|${c.color}`;
-        if (!sections.has(key)) sections.set(key, { style: c.style_code, color: c!.color, cells: [] });
+        if (!sections.has(key)) sections.set(key, { style: c.style_code, color: c.color, cells: [] });
         sections.get(key)!.cells.push(c);
     }
     const secList = [...sections.values()];
 
-    const inseams = [...new Set(ex.cells.map((c: any) => c.inseam))].sort(
+    const inseams = [...new Set(cells.map((c) => c.inseam))].sort(
         (a, b) => (a as number) - (b as number)
     ) as number[];
+
 
     let head = "<th>Inseam</th>";
     for (const s of secList) {

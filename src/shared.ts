@@ -11,8 +11,21 @@ export interface ExtractionResult {
     sheet_date: string | null;
     fashion_line: string | null;
     operator: string | null;
-    cells: InventoryCell[];
+    sections: ExtractionSection[];
     notes: string | null;
+}
+
+export interface GroupedCell {
+    waist: number;
+    inseam: number;
+    quantity: number;
+    confidence: number;
+}
+
+export interface ExtractionSection {
+    style_code: string | null;
+    color: string | null;
+    cells: GroupedCell[];
 }
 
 export interface ConfirmRequest {
