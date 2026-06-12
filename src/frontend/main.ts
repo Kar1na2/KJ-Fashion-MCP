@@ -39,38 +39,29 @@ function flattenSections(ex: ExtractionResult): InventoryCell[] {
     return flat;
 }
 
-function toIsoDate(month: number, day: number, year: number): string | null {
-    if (!month || !day || !year) return null;
-    if (month < 1 || month > 12) return null;
-    if (year < 2020 || year > 2099) return null;
-
-    const d = new Date(year, month - 1, day);
-    if (
-        d.getFullYear() !== year ||
-        d.getMonth() !== month - 1 ||
-        d.getDate() !== day
-    ) {
-        return null;
-    }
-
-    const mm = String(month).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    return `${year}-${mm}-${dd}`;
+// The grid is counted every Saturday. A YYYY-MM-DD string is a valid intake
+// date only if it lands on a Saturday — we reject anything else instead of
+// nudging it to a nearby Saturday.
+function isSaturday(iso: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+    const d = new Date(`${iso}T00:00:00Z`);
+    if (isNaN(d.getTime())) return false;
+    return d.getUTCDay() === 6;
 }
 
 async function confirm() {
     const secList = (window as any)._secList;
     const cells: InventoryCell[] = [];
 
-    const month = Number((document.querySelector("#m-month") as HTMLInputElement).value);
-    const day = Number((document.querySelector("#m-day") as HTMLInputElement).value);
-    const year = Number((document.querySelector("#m-year") as HTMLInputElement).value);
-
-    const isoDate = toIsoDate(month, day, year);
+    const isoDate = (document.querySelector("#m-date") as HTMLInputElement).value;
     const errEl = document.querySelector("#date-error")!;
 
     if (!isoDate) {
-        errEl.textContent = "Enter a valid date (MM DD YYYY) before confirming.";
+        errEl.textContent = "Pick the inventory date before confirming.";
+        return;
+    }
+    if (!isSaturday(isoDate)) {
+        errEl.textContent = "Invalid date — inventory is counted on Saturdays only. Pick a Saturday.";
         return;
     }
     errEl.textContent = "";
@@ -206,13 +197,9 @@ function renderReview() {
                 Flagged cells fell below model confidence — verify before storing.
             </div>
             <div class="date-entry">
-                <label>Inventory date (required):</label>
-                <input id="m-month" type="number" min="1" max="12" placeholder="MM"
-                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(5, 7)) : ""}" />
-                <input id="m-day" type="number" min="1" max="31" placeholder="DD"
-                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(8, 10)) : ""}" />
-                <input id="m-year" type="number" min="2020" max="2099" placeholder="YYYY"
-                    value="${ex.sheet_date ? Number(ex.sheet_date.slice(0, 4)) : ""}" />
+                <label for="m-date">Inventory date — Saturday only (required):</label>
+                <input id="m-date" type="date"
+                    value="${ex.sheet_date && isSaturday(ex.sheet_date) ? ex.sheet_date : ""}" />
                 <span id="date-error" class="date-error"></span>
             </div>
             <div class="actions">
@@ -224,6 +211,14 @@ function renderReview() {
     `;
 
     (window as any)._secList = secList;
+
+    const dateInput = document.querySelector<HTMLInputElement>("#m-date")!;
+    const dateErr = document.querySelector("#date-error")!;
+    dateInput.addEventListener("change", () => {
+        const v = dateInput.value;
+        dateErr.textContent =
+            v && !isSaturday(v) ? "Invalid date — inventory is counted on Saturdays only. Pick a Saturday." : "";
+    });
 
     document.querySelector("#discard")!.addEventListener("click", renderUpload);
     // NOTE: pass the function reference so it is *called* on click.

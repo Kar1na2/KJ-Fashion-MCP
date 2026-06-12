@@ -73,6 +73,12 @@ app.post("/api/confirm", async (req, res) => {
             return res.status(400).json({ error: "A valid sheet_date (YYYY-MM-DD) is required" });
         }
 
+        // Inventory is counted every Saturday. Reject anything else outright
+        // rather than silently snapping to a nearby Saturday.
+        if (new Date(`${iso}T00:00:00Z`).getUTCDay() !== 6) {
+            return res.status(400).json({ error: "sheet_date must be a Saturday — inventory is counted weekly on Saturdays" });
+        }
+
         const stored = await confirmScan(body);
         res.json({ ok: true, rows_stored: stored });
     } catch (err) {

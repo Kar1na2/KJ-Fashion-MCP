@@ -14,10 +14,10 @@ function createServer() {
         {
             title: "Get weekly inventory trend",
             description:
-                "Returns daily inventory quantities within a date range, broken down by style code and color. Use for short-term analysis like 'what happened last week' or 'compare this week to the same week last year'. Provide start_date and end_date as YYYY-MM-DD strings.",
+                "Returns weekly inventory snapshots within a date range, broken down by style code and color. Each week is a separate, non-overlapping span that BEGINS on a Sunday (assume everything is filled) and ENDS the following Saturday, when the count is taken and the quantity sold over that week is calculated. So start_date is a Sunday and end_date is a Saturday — for a single week, use that week's Sunday and the Saturday 6 days later (e.g. 'this week' for a count on Sat 2026-06-13 is start_date 2026-06-07, end_date 2026-06-13). For multiple weeks, span from the first week's Sunday to the last week's Saturday. Provide both as YYYY-MM-DD strings.",
             inputSchema: {
-                start_date: z.string().describe("Start date inclusive, e.g. '2025-06-01'"),
-                end_date: z.string().describe("End date inclusive, e.g. '2025-06-07'"),
+                start_date: z.string().describe("Sunday the first week begins, inclusive, e.g. '2026-06-07'"),
+                end_date: z.string().describe("Saturday the last week ends, inclusive, e.g. '2026-06-13'"),
             },
         },
         async ({ start_date, end_date }) => {

@@ -348,16 +348,14 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   color: var(--ink-soft);
 }
 .date-entry input {
-  width: 4.2rem;
   font-family: var(--font-data);
   font-size: .92rem;
   font-weight: 600;
   color: var(--ink);
-  text-align: center;
   background: #fbf8f1;
   border: 1px solid var(--line-strong);
   border-radius: 3px;
-  padding: .4rem .3rem;
+  padding: .4rem .55rem;
   transition: border-color .15s, box-shadow .15s;
 }
 .date-entry input:focus {
@@ -366,7 +364,6 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
   background: #fff;
   box-shadow: 0 0 0 3px rgba(122,35,48,.12);
 }
-.date-entry input#m-year { width: 5.4rem; }
 .date-error {
   font-family: var(--font-data);
   font-size: .8rem;

@@ -5,6 +5,19 @@ import { resolve } from "node:path";
 
 let conn: DuckDBConnection | null = null;
 
+// Every cell is refilled to this baseline each Sunday. The Saturday count sheet
+// records how many units remain, so Silver stores the weekly difference
+// (FULL_STOCK - counted) = units sold/used that week, never below zero.
+const FULL_STOCK = 3;
+
+// Sheets are counted on Saturdays, but a week is keyed by the Sunday it began on
+// (6 days before the count). e.g. counted Sat 2026-06-13 -> week start 2026-06-07.
+function toWeekStart(saturdayIso: string): string {
+    const d = new Date(`${saturdayIso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 6);
+    return d.toISOString().slice(0, 10);
+}
+
 export async function initDb(): Promise<void> {
     const dbPath = "data/inventory.duckdb";
 
@@ -46,6 +59,9 @@ export async function confirmScan(
     try {
         await db.run("DELETE FROM silver_inventory WHERE scan_id = $id", { id: req.scan_id });
 
+        // Store the Sunday the week started on, not the Saturday it was counted.
+        const weekStart = req.sheet_date ? toWeekStart(req.sheet_date) : null;
+
         const stmt = await db.prepare(
             `INSERT INTO silver_inventory
             (scan_id, sheet_date, fashion_line, style_code, color, waist, inseam, quantity, confidence)
@@ -55,13 +71,13 @@ export async function confirmScan(
         for (const cell of req.cells) {
             stmt.bind({
                 scan: req.scan_id,
-                date: req.sheet_date,
+                date: weekStart,
                 line: req.fashion_line,
                 style: cell.style_code,
                 color: cell.color,
                 waist: cell.waist,
                 inseam: cell.inseam,
-                qty: cell.quantity,
+                qty: Math.max(0, FULL_STOCK - cell.quantity),
                 conf: cell.confidence,
             });
             await stmt.run();
