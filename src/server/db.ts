@@ -170,6 +170,82 @@ export async function listStyles() {
     return clean(reader.getRowObjects() as Record<string, unknown>[]);
 }
 
+// RECORDS (admin viewing / editing / deleting)
+
+// One row per stored week: the confirmed bronze scan joined to its silver rows,
+// keyed by the Sunday the week began (sheet_date). total_sold is the units
+// sold/used that week (already stored as max(0, 3 - count) in Silver).
+export async function listWeeks() {
+    const c = getDb();
+    const reader = await c.runAndReadAll(
+        `SELECT b.scan_id            AS scan_id,
+                b.source_image       AS source_image,
+                b.ingested_at        AS ingested_at,
+                s.sheet_date         AS sheet_date,
+                any_value(s.fashion_line) AS fashion_line,
+                COUNT(*)             AS line_count,
+                SUM(s.quantity)      AS total_sold
+           FROM bronze_scans b
+           JOIN silver_inventory s ON s.scan_id = b.scan_id
+          WHERE b.status = 'confirmed'
+          GROUP BY b.scan_id, b.source_image, b.ingested_at, s.sheet_date
+          ORDER BY s.sheet_date DESC`
+    );
+    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+}
+
+// Full detail for a single stored week: the bronze scan meta plus every Silver
+// row (units sold). Returns null if the scan does not exist.
+export async function getWeekDetail(scanId: string) {
+    const c = getDb();
+    const metaReader = await c.runAndReadAll(
+        `SELECT scan_id, source_image, status, ingested_at
+           FROM bronze_scans WHERE scan_id = $id`,
+        { id: scanId }
+    );
+    const metaRows = clean(metaReader.getRowObjects() as Record<string, unknown>[]);
+    if (metaRows.length === 0) return null;
+
+    const cellReader = await c.runAndReadAll(
+        `SELECT scan_id, sheet_date, fashion_line, style_code, color, waist, inseam, quantity, confidence
+           FROM silver_inventory WHERE scan_id = $id
+          ORDER BY style_code, color, waist, inseam`,
+        { id: scanId }
+    );
+    return {
+        scan: metaRows[0],
+        cells: clean(cellReader.getRowObjects() as Record<string, unknown>[]),
+    };
+}
+
+// The stored bronze image filename for a scan, or null if missing.
+export async function getScanImage(scanId: string): Promise<string | null> {
+    const c = getDb();
+    const reader = await c.runAndReadAll(
+        `SELECT source_image FROM bronze_scans WHERE scan_id = $id`,
+        { id: scanId }
+    );
+    const rows = reader.getRowObjects();
+    return rows.length ? String((rows[0] as Record<string, unknown>).source_image) : null;
+}
+
+// Remove a stored week entirely — its Silver rows and its Bronze scan record.
+// Returns the source_image filename so the caller can unlink the file on disk.
+export async function deleteWeek(scanId: string): Promise<string | null> {
+    const db = getDb();
+    const img = await getScanImage(scanId);
+    await db.run("BEGIN TRANSACTION");
+    try {
+        await db.run("DELETE FROM silver_inventory WHERE scan_id = $id", { id: scanId });
+        await db.run("DELETE FROM bronze_scans WHERE scan_id = $id", { id: scanId });
+        await db.run("COMMIT");
+        return img;
+    } catch (err) {
+        await db.run("ROLLBACK");
+        throw err;
+    }
+}
+
 // helper function
 export function getDb(): DuckDBConnection {
     if (!conn) throw new Error("DB not initialized — call initDb() first");

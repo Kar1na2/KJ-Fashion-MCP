@@ -382,3 +382,148 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+/* ---------- Top navigation ---------- */
+.topnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: -1rem 0 1.8rem;
+}
+.navlink {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  padding: .5rem 1.1rem;
+}
+.navlink:hover { background: var(--paper-deep); color: var(--ink); border-color: var(--ink-faint); }
+.navlink.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.navlink.logout { margin-left: auto; color: var(--oxblood); border-color: var(--line-strong); }
+.navlink.logout:hover { background: var(--flag); color: var(--oxblood-deep); border-color: var(--flag-border); }
+
+/* ---------- Login ---------- */
+.login-card { max-width: 460px; }
+.login-card h2 {
+  font-family: var(--font-display);
+  font-weight: 380;
+  font-size: 1.7rem;
+  margin: .2rem 0 .4rem;
+}
+.login-form { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.2rem; }
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  font-family: var(--font-data);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.login-form input {
+  font-family: var(--font-body);
+  font-size: .95rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: .65rem .7rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.login-form input:focus {
+  outline: none;
+  border-color: var(--oxblood);
+  box-shadow: 0 0 0 3px rgba(122,35,48,.12);
+}
+#login-msg, #edit-msg {
+  font-family: var(--font-data);
+  font-size: .85rem;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+  margin-top: .4rem;
+  min-height: 1.2rem;
+}
+
+/* ---------- Records ledger ---------- */
+table.ledger { border-collapse: collapse; width: 100%; font-family: var(--font-data); }
+table.ledger th, table.ledger td { text-align: left; border-bottom: 1px solid var(--line); padding: .7rem .9rem; }
+table.ledger thead th {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .72rem;
+}
+table.ledger td.num, table.ledger th.num { text-align: right; }
+table.ledger tbody tr:hover td { background: rgba(169,133,47,.08); }
+.week-link {
+  color: var(--oxblood);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.week-link:hover { border-bottom-color: var(--oxblood); }
+.row-actions { display: flex; gap: .45rem; justify-content: flex-end; }
+button.mini {
+  padding: .4rem .85rem;
+  font-size: .72rem;
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+button.mini:hover { background: var(--paper-deep); color: var(--ink); border-color: var(--ink-faint); }
+button.mini.danger { color: var(--oxblood); }
+button.mini.danger:hover { background: var(--flag); color: var(--oxblood-deep); border-color: var(--flag-border); }
+.empty { font-family: var(--font-display); font-style: italic; color: var(--ink-soft); margin: .4rem 0; }
+
+/* ---------- Record detail / edit two-up layout ---------- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1.6rem;
+  align-items: start;
+}
+@media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-grid table.grid td.num { font-weight: 700; }
+.bronze { margin: 0; }
+.bronze img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fbf8f1;
+  box-shadow: var(--shadow-card);
+  display: block;
+}
+.bronze figcaption {
+  font-family: var(--font-data);
+  font-size: .76rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-faint);
+  margin-top: .5rem;
+  text-align: center;
+}
+
+/* ---------- Generic async states (ledger / detail / edit bodies) ---------- */
+.busy, .err { font-family: var(--font-data); font-size: .85rem; letter-spacing: .04em; }
+.busy { color: var(--brass); }
+.err { color: var(--flag-border); font-weight: 600; }
+.busy::before {
+  content: "";
+  display: inline-block;
+  width: .7rem; height: .7rem;
+  margin-right: .5rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: spin .7s linear infinite;
+}

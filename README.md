@@ -50,7 +50,11 @@ Vite will also be my frontend just because of it's simplicity in setting up and 
         - make it easier to set the date by just clicking on a calendar instead of typing out the exact date 
     - Image upload remains the same, but the storage context is different as silver will now be keeping track of the difference everything will be 3 - # 
 
+- Viewing a list of entries from the database that shows the raw image from the bronze section for each date from db 
+    - Now there will be a basic login section where I'll be providing the credentials myself for security 
+        - This will lead to a homepage showing a list of rows that shows the dates stored example: "06-07-2026 -> 06-13-2026" or whatever way to put the date is easiest, each of these dates will be a link where once clicked will go to a new page that shows a clean view of the inventory sold as well as the raw picture from the bronze category that has been stored in that week 
+        - next to each date will have a button to edit or delete, in case the confirmation made human errors, the person with credentials can login and make an edit to that specific date or if it's a duplicate then the person can delete it
+
 ## Things to be worked on 
 
-- Viewing a list of entries from the database that shows the raw image from the bronze section for each date from db 
 - Allowing an actual MCP workflow that takes in the image every Saturday and automatically compiles a list and sends it as a checklist for refills
