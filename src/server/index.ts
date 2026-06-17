@@ -1,9 +1,10 @@
 import express from "express";
 import multer from "multer";
 import { nanoid } from "nanoid";
-import { initDb, insertBronze, confirmScan, getDb, getWeeklyTrend, getMonthlyTrend, getYearlyTrend, getStyleHistory, listStyles, listWeeks, getWeekDetail, getScanImage, deleteWeek } from "./db.js";
+import { initDb, insertBronze, confirmScan, getDb, getWeeklyTrend, getMonthlyTrend, getYearlyTrend, getStyleHistory, listStyles, listWeeks, getWeekDetail, getScanImage, deleteWeek, FULL_STOCK } from "./db.js";
 import "dotenv/config";
 import { extractSheet, testClaude } from "./extractor.js";
+import { buildRestockList, sendRestockTasks } from "./restock.js";
 import type { ConfirmRequest } from "../shared.js";
 import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve, extname } from "node:path";
@@ -126,12 +127,45 @@ app.post("/api/confirm", async (req, res) => {
         }
 
         const stored = await confirmScan(body);
-        res.json({ ok: true, rows_stored: stored });
+
+        // Compile the refill checklist from the same differences Silver stores
+        // and push it to Google Tasks. This must never sink the confirm: the
+        // inventory is already committed, so a Google outage just yields a
+        // warning the operator sees on the success screen.
+        const restock = await sendRestockChecklist(iso, body.cells);
+
+        res.json({ ok: true, rows_stored: stored, restock });
     } catch (err) {
         console.error("[confirm] error:" , err);
         res.status(500).json({ error: (err as Error).message });
     }
 });
+
+// Build the restock list for a confirmed sheet and send it as a Google Tasks
+// checklist. `countSaturday` is the YYYY-MM-DD Saturday the sheet was counted;
+// the list is titled with the Sunday→Saturday week span it refills.
+async function sendRestockChecklist(countSaturday: string, cells: ConfirmRequest["cells"]) {
+    const items = buildRestockList(cells, FULL_STOCK);
+
+    const sat = new Date(`${countSaturday}T00:00:00Z`);
+    const sun = new Date(sat);
+    sun.setUTCDate(sun.getUTCDate() - 6);
+    const us = (d: Date) => {
+        const [y, m, day] = d.toISOString().slice(0, 10).split("-");
+        return `${m}-${day}-${y}`;
+    };
+    const listTitle = `Restock — week ${us(sun)} → ${us(sat)}`;
+
+    const result = await sendRestockTasks(listTitle, items);
+    if (result.skipped) {
+        console.log("[restock] Google Tasks not configured — skipping checklist send");
+    } else if (result.ok) {
+        console.log(`[restock] sent ${result.count} item(s) to Google Tasks list "${listTitle}"`);
+    } else {
+        console.error(`[restock] send failed: ${result.error}`);
+    }
+    return result;
+}
 
 app.get("/api/scans", async (req, res) => {
     const db = getDb();

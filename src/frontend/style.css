@@ -527,3 +527,18 @@ button.mini.danger:hover { background: var(--flag); color: var(--oxblood-deep); 
   vertical-align: -1px;
   animation: spin .7s linear infinite;
 }
+
+/* ---------- Restock checklist note (success screen) ---------- */
+.restock-note {
+  font-family: var(--font-data);
+  font-size: .9rem;
+  letter-spacing: .02em;
+  margin: 1rem auto 0;
+  max-width: 42ch;
+  padding: .6rem .8rem;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+.restock-note.good  { color: var(--ok);          background: var(--ok-soft);  border-color: var(--ok); }
+.restock-note.warn  { color: var(--flag-border);  background: var(--flag);     border-color: var(--flag-border); }
+.restock-note.muted { color: var(--ink-faint);    background: var(--paper-deep); }

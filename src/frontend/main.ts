@@ -624,7 +624,7 @@ async function confirm() {
         if (!res.ok) throw new Error((await res.json()).error ?? "Save failed");
         const out = await res.json();
         // Capture the line before we clear `current`, then move to the success screen.
-        renderSuccess(out.rows_stored, body.fashion_line);
+        renderSuccess(out.rows_stored, body.fashion_line, out.restock);
     } catch (e) {
         msg.className = "err";
         msg.textContent = "Error: " + (e as Error).message;
@@ -633,7 +633,36 @@ async function confirm() {
     }
 }
 
-function renderSuccess(rowsStored: number, line: string | null) {
+interface RestockResult {
+    ok: boolean;
+    skipped?: boolean;
+    count: number;
+    listTitle?: string;
+    error?: string;
+}
+
+/* A short line about the refill checklist sent to Google Tasks on confirm. */
+function restockNote(r?: RestockResult): string {
+    if (!r) return "";
+    let cls = "restock-note";
+    let text: string;
+    if (r.skipped) {
+        cls += " muted";
+        text = "Refill checklist ready, but Google Tasks isn't configured — no list was sent.";
+    } else if (r.ok && r.count > 0) {
+        cls += " good";
+        text = `Refill checklist sent to Google Tasks — <b>${r.count}</b> ${r.count === 1 ? "item" : "items"} in “${r.listTitle ?? "Restock"}”.`;
+    } else if (r.ok) {
+        cls += " muted";
+        text = "Nothing to refill this week — no checklist needed.";
+    } else {
+        cls += " warn";
+        text = `Stored fine, but the Google Tasks checklist failed to send: ${r.error ?? "unknown error"}.`;
+    }
+    return `<p class="${cls}">${text}</p>`;
+}
+
+function renderSuccess(rowsStored: number, line: string | null, restock?: RestockResult) {
     current = null; // the confirmed scan is done; clear the working state
     app.innerHTML = `
         ${masthead("Stored")}
@@ -651,6 +680,7 @@ function renderSuccess(rowsStored: number, line: string | null) {
                 <b>${rowsStored}</b> inventory ${rowsStored === 1 ? "row" : "rows"}
                 ${line ? `for <b>${line}</b> ` : ""}have been recorded and verified.
             </p>
+            ${restockNote(restock)}
             <div class="actions">
                 <button class="primary" id="again">Upload a new file</button>
                 <button class="ghost" id="to-records">View records</button>

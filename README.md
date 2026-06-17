@@ -55,6 +55,11 @@ Vite will also be my frontend just because of it's simplicity in setting up and 
         - This will lead to a homepage showing a list of rows that shows the dates stored example: "06-07-2026 -> 06-13-2026" or whatever way to put the date is easiest, each of these dates will be a link where once clicked will go to a new page that shows a clean view of the inventory sold as well as the raw picture from the bronze category that has been stored in that week 
         - next to each date will have a button to edit or delete, in case the confirmation made human errors, the person with credentials can login and make an edit to that specific date or if it's a duplicate then the person can delete it
 
+- Adding feature to automatically compile a list after every entry and sends it as a checklist for refills
+    - When the confirm button is hit, since it now stores the values as differences rather than simply what's in stock, it will send that detail as a Google todo list as an email that lists the color code, waist, length, and the amount of quantity it needs for that item to be restocked 
+    - Visually it will be grouped up based on the color code then waist and the waist will be ordered from shortest to longest
+
 ## Things to be worked on 
 
-- Allowing an actual MCP workflow that takes in the image every Saturday and automatically compiles a list and sends it as a checklist for refills
+- Currently the added feature allows for a warning to just pass when sending the checklist doesn't work, adding a feature to allow for a checklist to be sent from previous entries alongside edit and delete 
+    - Adding onto this a feature where the checklist now doesn't send to a set email but allows for flexibility in which email to send to
