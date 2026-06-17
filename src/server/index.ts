@@ -4,7 +4,9 @@ import { nanoid } from "nanoid";
 import { initDb, insertBronze, confirmScan, getDb, getWeeklyTrend, getMonthlyTrend, getYearlyTrend, getStyleHistory, listStyles, listWeeks, getWeekDetail, getScanImage, deleteWeek, FULL_STOCK } from "./db.js";
 import "dotenv/config";
 import { extractSheet, testClaude } from "./extractor.js";
-import { buildRestockList, sendRestockTasks } from "./restock.js";
+import { buildRestockList } from "./restock.js";
+import { createChecklistPage } from "./notion.js";
+import { sendChecklistEmail } from "./mailer.js";
 import type { ConfirmRequest } from "../shared.js";
 import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve, extname } from "node:path";
@@ -128,43 +130,51 @@ app.post("/api/confirm", async (req, res) => {
 
         const stored = await confirmScan(body);
 
-        // Compile the refill checklist from the same differences Silver stores
-        // and push it to Google Tasks. This must never sink the confirm: the
-        // inventory is already committed, so a Google outage just yields a
+        // Compile the refill checklist from the same differences Silver stores,
+        // publish it to Notion and email the public link. Non-blocking: the
+        // inventory is already committed, so a Notion/Gmail outage just yields a
         // warning the operator sees on the success screen.
-        const restock = await sendRestockChecklist(iso, body.cells);
+        const items = buildRestockList(body.cells, (c) => FULL_STOCK - Number(c.quantity));
+        const checklist = await publishAndEmailChecklist(weekRangeLabel(iso), items);
 
-        res.json({ ok: true, rows_stored: stored, restock });
+        res.json({ ok: true, rows_stored: stored, checklist });
     } catch (err) {
         console.error("[confirm] error:" , err);
         res.status(500).json({ error: (err as Error).message });
     }
 });
 
-// Build the restock list for a confirmed sheet and send it as a Google Tasks
-// checklist. `countSaturday` is the YYYY-MM-DD Saturday the sheet was counted;
-// the list is titled with the Sunday→Saturday week span it refills.
-async function sendRestockChecklist(countSaturday: string, cells: ConfirmRequest["cells"]) {
-    const items = buildRestockList(cells, FULL_STOCK);
-
-    const sat = new Date(`${countSaturday}T00:00:00Z`);
+// "MM-DD-YYYY → MM-DD-YYYY" from the count Saturday: the week runs from the
+// Sunday it began (Saturday - 6 days) through the Saturday it was counted.
+function weekRangeLabel(countSaturdayIso: string): string {
+    const sat = new Date(`${countSaturdayIso}T00:00:00Z`);
     const sun = new Date(sat);
     sun.setUTCDate(sun.getUTCDate() - 6);
     const us = (d: Date) => {
-        const [y, m, day] = d.toISOString().slice(0, 10).split("-");
-        return `${m}-${day}-${y}`;
+        const [y, m, dd] = d.toISOString().slice(0, 10).split("-");
+        return `${m}-${dd}-${y}`;
     };
-    const listTitle = `Restock — week ${us(sun)} → ${us(sat)}`;
+    return `${us(sun)} → ${us(sat)}`;
+}
 
-    const result = await sendRestockTasks(listTitle, items);
-    if (result.skipped) {
-        console.log("[restock] Google Tasks not configured — skipping checklist send");
-    } else if (result.ok) {
-        console.log(`[restock] sent ${result.count} item(s) to Google Tasks list "${listTitle}"`);
-    } else {
-        console.error(`[restock] send failed: ${result.error}`);
-    }
-    return result;
+// Build the Notion page and email its public URL. Returns the combined result so
+// the success screen can report exactly what happened. Never throws.
+async function publishAndEmailChecklist(weekRange: string, items: ReturnType<typeof buildRestockList>) {
+    const subject = `${weekRange} Inventory Checklist`;
+
+    const notion = await createChecklistPage(subject, items);
+    if (notion.skipped) console.log("[checklist] Notion not configured — skipping page creation");
+    else if (!notion.ok) console.error(`[checklist] Notion failed: ${notion.error}`);
+
+    // No URL means nothing to email (skipped, failed, or nothing to refill).
+    if (!notion.url) return { notion, mail: { ok: false, skipped: true as const }, url: undefined };
+
+    const mail = await sendChecklistEmail(subject, notion.url);
+    if (mail.skipped) console.log("[checklist] Gmail not configured — link created but not emailed");
+    else if (mail.ok) console.log(`[checklist] emailed ${subject}: ${notion.url}`);
+    else console.error(`[checklist] email failed: ${mail.error}`);
+
+    return { notion, mail, url: notion.url };
 }
 
 app.get("/api/scans", async (req, res) => {

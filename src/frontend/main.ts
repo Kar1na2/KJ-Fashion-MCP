@@ -624,7 +624,7 @@ async function confirm() {
         if (!res.ok) throw new Error((await res.json()).error ?? "Save failed");
         const out = await res.json();
         // Capture the line before we clear `current`, then move to the success screen.
-        renderSuccess(out.rows_stored, body.fashion_line, out.restock);
+        renderSuccess(out.rows_stored, body.fashion_line, out.checklist);
     } catch (e) {
         msg.className = "err";
         msg.textContent = "Error: " + (e as Error).message;
@@ -633,36 +633,36 @@ async function confirm() {
     }
 }
 
-interface RestockResult {
-    ok: boolean;
-    skipped?: boolean;
-    count: number;
-    listTitle?: string;
-    error?: string;
+interface ChecklistResult {
+    notion: { ok: boolean; skipped?: boolean; url?: string; error?: string };
+    mail: { ok: boolean; skipped?: boolean; error?: string };
+    url?: string;
 }
 
-/* A short line about the refill checklist sent to Google Tasks on confirm. */
-function restockNote(r?: RestockResult): string {
-    if (!r) return "";
-    let cls = "restock-note";
-    let text: string;
-    if (r.skipped) {
-        cls += " muted";
-        text = "Refill checklist ready, but Google Tasks isn't configured — no list was sent.";
-    } else if (r.ok && r.count > 0) {
-        cls += " good";
-        text = `Refill checklist sent to Google Tasks — <b>${r.count}</b> ${r.count === 1 ? "item" : "items"} in “${r.listTitle ?? "Restock"}”.`;
-    } else if (r.ok) {
-        cls += " muted";
-        text = "Nothing to refill this week — no checklist needed.";
-    } else {
-        cls += " warn";
-        text = `Stored fine, but the Google Tasks checklist failed to send: ${r.error ?? "unknown error"}.`;
+/* A short line about the refill checklist published to Notion + emailed. */
+function checklistNote(c?: ChecklistResult): string {
+    if (!c) return "";
+    // Nothing to refill: Notion returns ok with no URL.
+    if (c.notion.ok && !c.url) {
+        return `<p class="checklist-note muted">Nothing to refill this week — no checklist sent.</p>`;
     }
-    return `<p class="${cls}">${text}</p>`;
+    if (c.notion.skipped) {
+        return `<p class="checklist-note muted">Notion isn't configured — no checklist link was created.</p>`;
+    }
+    if (!c.notion.ok || !c.url) {
+        return `<p class="checklist-note warn">Stored fine, but the Notion checklist failed: ${c.notion.error ?? "unknown error"}.</p>`;
+    }
+    const link = `<a href="${c.url}" target="_blank" rel="noopener">${c.url}</a>`;
+    if (c.mail.ok) {
+        return `<p class="checklist-note good">Refill checklist published and emailed.<br>${link}</p>`;
+    }
+    if (c.mail.skipped) {
+        return `<p class="checklist-note muted">Checklist published (Gmail not configured, so not emailed).<br>${link}</p>`;
+    }
+    return `<p class="checklist-note warn">Checklist published, but the email failed: ${c.mail.error ?? "unknown error"}.<br>${link}</p>`;
 }
 
-function renderSuccess(rowsStored: number, line: string | null, restock?: RestockResult) {
+function renderSuccess(rowsStored: number, line: string | null, checklist?: ChecklistResult) {
     current = null; // the confirmed scan is done; clear the working state
     app.innerHTML = `
         ${masthead("Stored")}
@@ -680,7 +680,7 @@ function renderSuccess(rowsStored: number, line: string | null, restock?: Restoc
                 <b>${rowsStored}</b> inventory ${rowsStored === 1 ? "row" : "rows"}
                 ${line ? `for <b>${line}</b> ` : ""}have been recorded and verified.
             </p>
-            ${restockNote(restock)}
+            ${checklistNote(checklist)}
             <div class="actions">
                 <button class="primary" id="again">Upload a new file</button>
                 <button class="ghost" id="to-records">View records</button>

@@ -528,17 +528,20 @@ button.mini.danger:hover { background: var(--flag); color: var(--oxblood-deep); 
   animation: spin .7s linear infinite;
 }
 
-/* ---------- Restock checklist note (success screen) ---------- */
-.restock-note {
+/* ---------- Checklist note (success screen) ---------- */
+.checklist-note {
   font-family: var(--font-data);
   font-size: .9rem;
   letter-spacing: .02em;
+  line-height: 1.5;
   margin: 1rem auto 0;
-  max-width: 42ch;
+  max-width: 52ch;
   padding: .6rem .8rem;
   border-radius: 4px;
   border: 1px solid var(--line);
+  word-break: break-all;
 }
-.restock-note.good  { color: var(--ok);          background: var(--ok-soft);  border-color: var(--ok); }
-.restock-note.warn  { color: var(--flag-border);  background: var(--flag);     border-color: var(--flag-border); }
-.restock-note.muted { color: var(--ink-faint);    background: var(--paper-deep); }
+.checklist-note a     { color: inherit; text-decoration: underline; }
+.checklist-note.good  { color: var(--ok);         background: var(--ok-soft);    border-color: var(--ok); }
+.checklist-note.warn  { color: var(--flag-border); background: var(--flag);       border-color: var(--flag-border); }
+.checklist-note.muted { color: var(--ink-faint);   background: var(--paper-deep); }

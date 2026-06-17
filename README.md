@@ -56,8 +56,10 @@ Vite will also be my frontend just because of it's simplicity in setting up and 
         - next to each date will have a button to edit or delete, in case the confirmation made human errors, the person with credentials can login and make an edit to that specific date or if it's a duplicate then the person can delete it
 
 - Adding feature to automatically compile a list after every entry and sends it as a checklist for refills
-    - When the confirm button is hit, since it now stores the values as differences rather than simply what's in stock, it will send that detail as a Google todo list as an email that lists the color code, waist, length, and the amount of quantity it needs for that item to be restocked 
-    - Visually it will be grouped up based on the color code then waist and the waist will be ordered from shortest to longest
+    - When the confirm button is hit, since it now stores the values as differences rather than simply what's in stock, it compiles those differences into a **Notion page** of checkbox items (color code, style, waist, length and the quantity to restock) and **emails the public Notion link** (subject `<week range> Inventory Checklist`, body = the URL) via Gmail.
+    - Visually it is grouped by color code, then waist ordered shortest to longest (then inseam).
+    - Sending is non-blocking — the inventory commits regardless, and the success screen reports whether the link was created and emailed.
+    - Setup: the Notion API can't publish to web, so a parent page is **published to the web once** (it publishes its subpages too) and each weekly page is created under it; Gmail needs an **App Password** (2FA on). All config is in `.env` (`NOTION_*`, `GMAIL_*`, `CHECKLIST_EMAIL_TO`).
 
 ## Things to be worked on 
 

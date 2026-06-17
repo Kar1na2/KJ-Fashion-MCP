@@ -8,8 +8,8 @@ let conn: DuckDBConnection | null = null;
 // Every cell is refilled to this baseline each Sunday. The Saturday count sheet
 // records how many units remain, so Silver stores the weekly difference
 // (FULL_STOCK - counted) = units sold/used that week, never below zero. That
-// same difference is exactly how many units the cell needs to be refilled, so
-// the restock checklist is derived from it (see restock.ts).
+// same difference is how many units the cell needs refilled, which drives the
+// checklist (see restock.ts).
 export const FULL_STOCK = 3;
 
 // Sheets are counted on Saturdays, but a week is keyed by the Sunday it began on
