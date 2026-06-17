@@ -23,6 +23,14 @@ export interface NotionResult {
     error?: string;
 }
 
+// Result of the startup connectivity check.
+export interface VerifyResult {
+    configured: boolean; // token + parent + domain present in .env
+    ok: boolean; // token valid AND parent page reachable by the integration
+    detail?: string;
+    error?: string;
+}
+
 function todoBlock(text: string) {
     return {
         object: "block",
@@ -87,5 +95,49 @@ export async function createChecklistPage(title: string, items: RestockItem[]): 
         return { ok: true, url };
     } catch (err) {
         return { ok: false, error: (err as Error).message };
+    }
+}
+
+// Pull the plain-text title from a retrieved page object, if any.
+function pageTitle(page: { properties?: Record<string, any> }): string | null {
+    const props = page.properties ?? {};
+    for (const key of Object.keys(props)) {
+        const p = props[key];
+        if (p?.type === "title") {
+            const text = (p.title ?? []).map((r: any) => r.plain_text).join("");
+            return text || null;
+        }
+    }
+    return null;
+}
+
+// Startup check: a single GET of the parent page validates the token, the page
+// id, and that the integration is actually connected to that page (a missing
+// connection or wrong id surfaces as 404). Does not mutate anything.
+export async function verifyNotion(): Promise<VerifyResult> {
+    const token = process.env.NOTION_TOKEN;
+    const parent = process.env.NOTION_PARENT_PAGE_ID;
+    const domain = process.env.NOTION_SITE_DOMAIN;
+    if (!token || !parent || !domain) return { configured: false, ok: false };
+
+    try {
+        const res = await fetch(`${NOTION_API}/pages/${parent}`, {
+            headers: { Authorization: `Bearer ${token}`, "Notion-Version": NOTION_VERSION },
+        });
+        if (!res.ok) {
+            const body = (await res.text()).slice(0, 200);
+            const hint =
+                res.status === 401
+                    ? " (invalid NOTION_TOKEN)"
+                    : res.status === 404
+                      ? " (wrong NOTION_PARENT_PAGE_ID, or the integration isn't connected to the page)"
+                      : "";
+            throw new Error(`GET page ${res.status}${hint}: ${body}`);
+        }
+        const page = (await res.json()) as { properties?: Record<string, any> };
+        const title = pageTitle(page) ?? parent;
+        return { configured: true, ok: true, detail: `parent "${title}" reachable · links via ${domain}` };
+    } catch (err) {
+        return { configured: true, ok: false, error: (err as Error).message };
     }
 }

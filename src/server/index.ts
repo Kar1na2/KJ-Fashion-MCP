@@ -5,8 +5,8 @@ import { initDb, insertBronze, confirmScan, getDb, getWeeklyTrend, getMonthlyTre
 import "dotenv/config";
 import { extractSheet, testClaude } from "./extractor.js";
 import { buildRestockList } from "./restock.js";
-import { createChecklistPage } from "./notion.js";
-import { sendChecklistEmail } from "./mailer.js";
+import { createChecklistPage, verifyNotion } from "./notion.js";
+import { sendChecklistEmail, verifyGmail } from "./mailer.js";
 import type { ConfirmRequest } from "../shared.js";
 import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve, extname } from "node:path";
@@ -318,10 +318,36 @@ app.get("/api/scans/:scanId/image", async (req, res) => {
     }
 });
 
-await initDb();
+// Probe every external API we depend on at startup so misconfiguration shows up
+// immediately in the dev console rather than at confirm time. Non-blocking: a
+// failed/unconfigured integration logs a warning but the server still starts
+// (these features skip gracefully when unconfigured).
+async function checkIntegrations() {
+    console.log("[startup] checking integrations…");
 
-console.log("[claude] testing connection...");
-console.log("[claude]", await testClaude());
+    // Claude — sheet extraction.
+    try {
+        const msg = await testClaude();
+        console.log(`[startup] Claude:  ✓ ${msg.trim()}`);
+    } catch (err) {
+        console.warn(`[startup] Claude:  ✗ ${(err as Error).message}`);
+    }
+
+    // Notion — checklist page.
+    const notion = await verifyNotion();
+    if (!notion.configured) console.log("[startup] Notion:  – not configured (checklist page will skip)");
+    else if (notion.ok) console.log(`[startup] Notion:  ✓ ${notion.detail}`);
+    else console.warn(`[startup] Notion:  ✗ ${notion.error}`);
+
+    // Gmail — emails the checklist link.
+    const gmail = await verifyGmail();
+    if (!gmail.configured) console.log("[startup] Gmail:   – not configured (checklist email will skip)");
+    else if (gmail.ok) console.log(`[startup] Gmail:   ✓ SMTP auth OK (${gmail.detail})`);
+    else console.warn(`[startup] Gmail:   ✗ ${gmail.error}`);
+}
+
+await initDb();
+await checkIntegrations();
 
 app.listen(PORT, () => {
     console.log(`[server] http://localhost:${PORT}`);
