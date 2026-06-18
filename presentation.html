@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KJ Fashion MCP Server — Presentation</title>
+<style>
+  :root {
+    --bg: #0e0b16;
+    --bg2: #1a1426;
+    --accent: #d4af6a;
+    --accent2: #e8c98a;
+    --pink: #c77dff;
+    --text: #f3eefb;
+    --muted: #b8aecb;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(212,175,106,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 10%, #241a36 0%, var(--bg) 55%);
+    color: var(--text);
+    overflow: hidden;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6vh 9vw;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .slide.active { display: flex; opacity: 1; }
+
+  .kicker {
+    font-size: 0.95rem; letter-spacing: 0.35em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1.4rem; font-weight: 600;
+  }
+  h1 { font-size: 4.6rem; line-height: 1.04; font-weight: 800; letter-spacing: -0.02em; }
+  h1 .grad {
+    background: linear-gradient(100deg, var(--accent2), var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  h2 { font-size: 2.9rem; font-weight: 750; margin-bottom: 2rem; letter-spacing: -0.01em; }
+  h2 .bar { color: var(--accent); }
+
+  .subtitle { margin-top: 1.8rem; font-size: 1.45rem; color: var(--muted); max-width: 40ch; }
+  .byline { margin-top: 3rem; font-size: 1.3rem; color: var(--text); }
+  .byline b { color: var(--accent2); font-weight: 700; }
+  .byline span { color: var(--muted); }
+
+  /* Workflow flow */
+  .flow { display: flex; flex-direction: column; gap: 1.1rem; }
+  .lane-label { font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink); margin-bottom: -0.3rem; }
+  .row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .node {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.85rem 1.15rem;
+    font-size: 1.02rem; line-height: 1.25;
+  }
+  .node b { color: var(--accent2); display: block; font-size: 0.82rem; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.2rem; }
+  .node small { color: var(--muted); font-size: 0.85rem; }
+  .arrow { color: var(--accent); font-size: 1.5rem; font-weight: 700; }
+  .medal { border-left: 3px solid; }
+  .bronze { border-left-color: #cd7f32; }
+  .silver { border-left-color: #c0c0c0; }
+  .gold { border-left-color: var(--accent); }
+
+  /* Tech stack grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+  .cat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.4rem;
+  }
+  .cat h3 { font-size: 0.85rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.9rem; }
+  .cat ul { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .cat li { font-size: 1.08rem; display: flex; align-items: baseline; gap: 0.5rem; }
+  .cat li::before { content: "▸"; color: var(--pink); font-size: 0.8rem; }
+  .cat li span { color: var(--muted); font-size: 0.88rem; }
+
+  /* Future list */
+  .future { display: flex; flex-direction: column; gap: 1.3rem; max-width: 60ch; }
+  .future .item { display: flex; gap: 1.1rem; align-items: flex-start; }
+  .future .num {
+    flex: 0 0 auto; width: 2.6rem; height: 2.6rem; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.1rem;
+    background: linear-gradient(135deg, var(--accent), var(--pink)); color: #1a1426;
+  }
+  .future .body { font-size: 1.25rem; line-height: 1.4; }
+  .future .body b { color: var(--accent2); }
+  .future .body small { display: block; color: var(--muted); font-size: 0.98rem; margin-top: 0.25rem; }
+
+  /* Nav + progress */
+  .nav {
+    position: fixed; bottom: 22px; right: 28px; display: flex; gap: 10px; align-items: center; z-index: 10;
+  }
+  .nav button {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    width: 40px; height: 40px; border-radius: 10px; font-size: 1.2rem; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .nav button:hover { background: rgba(212,175,106,0.18); }
+  .counter { position: fixed; bottom: 30px; left: 28px; color: var(--muted); font-size: 0.95rem; letter-spacing: 0.1em; z-index: 10; }
+  .dots { position: fixed; top: 26px; right: 28px; display: flex; gap: 8px; z-index: 10; }
+  .dots span { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: all 0.3s; }
+  .dots span.on { background: var(--accent); width: 26px; border-radius: 6px; }
+  .logo { position: fixed; top: 24px; left: 28px; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); font-size: 0.95rem; z-index: 10; }
+  .logo b { color: var(--accent); }
+  .hint { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); color: rgba(184,174,203,0.5); font-size: 0.8rem; z-index: 10; }
+</style>
+</head>
+<body>
+<div class="logo"><b>KJ</b> Fashion · MCP</div>
+<div class="dots" id="dots"></div>
+
+<div class="deck">
+
+  <!-- SLIDE 1: INTRO -->
+  <section class="slide active">
+    <div class="kicker">Inventory Intelligence · MCP Server</div>
+    <h1>KJ Fashion<br><span class="grad">MCP Server</span></h1>
+    <p class="subtitle">An AI-queryable inventory pipeline that turns weekly handwritten count sheets into clean, trend-ready data.</p>
+    <p class="byline"><b>Joon Park</b> &nbsp;·&nbsp; <span>University of San Francisco</span></p>
+  </section>
+
+  <!-- SLIDE 2: WORKFLOW -->
+  <section class="slide">
+    <h2><span class="bar">02 ·</span> Full Workflow</h2>
+    <div class="flow">
+      <div class="lane-label">Intake — every Saturday count, Sunday refill to baseline (3 / cell)</div>
+      <div class="row">
+        <div class="node"><b>Employee</b>Snaps inventory sheet<br><small>Date locked to a Saturday via calendar picker</small></div>
+        <span class="arrow">→</span>
+        <div class="node medal bronze"><b>Bronze</b>Raw scanned image<br><small>Object storage, append-only</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>OCR / Vision</b>Extract + validate<br><small>Claude / vision model</small></div>
+        <span class="arrow">→</span>
+        <div class="node medal silver"><b>Silver</b>Weekly diff = max(0, 3−count)<br><small>Units sold, partitioned by month</small></div>
+        <span class="arrow">→</span>
+        <div class="node medal gold"><b>Gold</b>Materialized rollups<br><small>Monthly trend aggregates</small></div>
+      </div>
+
+      <div class="lane-label" style="margin-top:1rem">Consume — query &amp; act</div>
+      <div class="row">
+        <div class="node"><b>Client</b>Claude / Gemini<br><small>Natural-language questions</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>MCP Server</b>Query tool hits Gold<br><small>Returns inventory trends</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>Web App</b>Login · view by week · edit / delete<br><small>Raw image + clean sold view</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>Auto Checklist</b>Notion page of restock items<br><small>Public link emailed via Gmail</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: TECH STACK -->
+  <section class="slide">
+    <h2><span class="bar">03 ·</span> Tech Stack</h2>
+    <div class="grid">
+      <div class="cat">
+        <h3>Language &amp; Core</h3>
+        <ul>
+          <li>TypeScript</li>
+          <li>SQL <span>queries / schema</span></li>
+          <li>Zod <span>validation</span></li>
+          <li>dotenv <span>config</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>Data Layer</h3>
+        <ul>
+          <li>DuckDB <span>OLAP, columnar</span></li>
+          <li>Medallion <span>Bronze/Silver/Gold</span></li>
+          <li>Time-series <span>weekly snapshots</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>AI / MCP</h3>
+        <ul>
+          <li>MCP SDK <span>@modelcontextprotocol</span></li>
+          <li>Anthropic SDK <span>vision / Claude</span></li>
+          <li>Claude &amp; Gemini <span>clients</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>Server</h3>
+        <ul>
+          <li>Express 5</li>
+          <li>Multer <span>image upload</span></li>
+          <li>nanoid <span>IDs</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>Frontend</h3>
+        <ul>
+          <li>Vite <span>fast dev / deploy</span></li>
+          <li>tsx <span>TS runtime</span></li>
+        </ul>
+      </div>
+      <div class="cat">
+        <h3>Integrations</h3>
+        <ul>
+          <li>Notion API <span>restock checklist</span></li>
+          <li>Nodemailer + Gmail <span>email link</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: FUTURE -->
+  <section class="slide">
+    <h2><span class="bar">04 ·</span> What's Next</h2>
+    <div class="future">
+      <div class="item">
+        <div class="num">1</div>
+        <div class="body"><b>Resend checklists from past entries</b>
+          <small>Today a failed checklist send just warns and passes — let users regenerate &amp; send a checklist from any previous week, alongside edit / delete.</small></div>
+      </div>
+      <div class="item">
+        <div class="num">2</div>
+        <div class="body"><b>Flexible email recipients</b>
+          <small>Move beyond a single hard-coded address — choose which email a checklist goes to at send time.</small></div>
+      </div>
+      <div class="item">
+        <div class="num">3</div>
+        <div class="body"><b>Richer analytics surface</b>
+          <small>Expose more MCP query tools over Gold rollups — seasonal trends, top movers, and restock forecasting.</small></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="counter" id="counter">01 / 04</div>
+<div class="hint">← → or Space to navigate</div>
+<div class="nav">
+  <button onclick="go(-1)">‹</button>
+  <button onclick="go(1)">›</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let i = 0;
+  slides.forEach((_, n) => {
+    const d = document.createElement('span');
+    if (n === 0) d.className = 'on';
+    dots.appendChild(d);
+  });
+  const dotEls = dots.querySelectorAll('span');
+  function render() {
+    slides.forEach((s, n) => s.classList.toggle('active', n === i));
+    dotEls.forEach((d, n) => d.classList.toggle('on', n === i));
+    counter.textContent = String(i + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+  }
+  function go(dir) { i = Math.max(0, Math.min(slides.length - 1, i + dir)); render(); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft') go(-1);
+  });
+</script>
+</body>
+</html>
