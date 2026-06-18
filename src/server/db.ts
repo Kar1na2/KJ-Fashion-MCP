@@ -99,6 +99,15 @@ export async function confirmScan(
 
 // GOLD
 
+// Time a DuckDB read: separates how long the engine takes to run the query and
+// materialize rows from everything upstream (HTTP, MCP). Logs to stderr.
+async function timedRead(label: string, run: () => Promise<Record<string, unknown>[]>) {
+    const t0 = performance.now();
+    const rows = await run();
+    console.error(`[db] ${label} -> ${rows.length} rows in ${(performance.now() - t0).toFixed(1)}ms`);
+    return rows;
+}
+
 function clean(rows: Record<string, unknown>[]): Record<string, unknown>[] {
     return rows.map((row) => {
         const out: Record<string, unknown> = {};
@@ -114,62 +123,72 @@ function clean(rows: Record<string, unknown>[]): Record<string, unknown>[] {
 
 export async function getWeeklyTrend(start_date: string, end_date: string) {
     const c = getDb();
-    const reader = await c.runAndReadAll(
-        `SELECT sheet_date, style_code, color, SUM(quantity) AS qty
-            FROM silver_inventory
-        WHERE sheet_date BETWEEN $start AND $end
-        GROUP BY 1, 2, 3
-        ORDER BY sheet_date, style_code, color`,
-        { start: start_date, end: end_date }
-    );
-    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    return timedRead(`getWeeklyTrend(${start_date}..${end_date})`, async () => {
+        const reader = await c.runAndReadAll(
+            `SELECT sheet_date, style_code, color, SUM(quantity) AS qty
+                FROM silver_inventory
+            WHERE sheet_date BETWEEN $start AND $end
+            GROUP BY 1, 2, 3
+            ORDER BY sheet_date, style_code, color`,
+            { start: start_date, end: end_date }
+        );
+        return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    });
 }
 
 export async function getMonthlyTrend(year: number, month: number) {
     const c = getDb();
-    const reader = await c.runAndReadAll(
-        `SELECT month, style_code, color, SUM(total_qty) AS qty
-            FROM gold_monthly
-        WHERE year(month) = $yr AND month(month) = $mo
-        GROUP BY 1, 2, 3
-        ORDER BY style_code, color`,
-        { yr: year, mo: month }
-    );
-    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    return timedRead(`getMonthlyTrend(${year}-${month})`, async () => {
+        const reader = await c.runAndReadAll(
+            `SELECT month, style_code, color, SUM(total_qty) AS qty
+                FROM gold_monthly
+            WHERE year(month) = $yr AND month(month) = $mo
+            GROUP BY 1, 2, 3
+            ORDER BY style_code, color`,
+            { yr: year, mo: month }
+        );
+        return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    });
 }
 
 export async function getYearlyTrend(year: number) {
     const c = await getDb();
-    const reader = await c.runAndReadAll(
-        `SELECT month, style_code, color, SUM(total_qty) AS qty
-            FROM gold_monthly
-        WHERE year(month) = $yr
-        GROUP BY 1, 2, 3
-        ORDER BY month, style_code, color`,
-        { yr: year }
-    );
-    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    return timedRead(`getYearlyTrend(${year})`, async () => {
+        const reader = await c.runAndReadAll(
+            `SELECT month, style_code, color, SUM(total_qty) AS qty
+                FROM gold_monthly
+            WHERE year(month) = $yr
+            GROUP BY 1, 2, 3
+            ORDER BY month, style_code, color`,
+            { yr: year }
+        );
+        return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    });
 }
 
 export async function getStyleHistory(styleCode: string) {
     const c = await getDb();
-    const reader = await c.runAndReadAll(
-        `SELECT month, color, SUM(total_qty) AS qty
-            FROM gold_monthly
-        WHERE style_code = $s
-        GROUP BY 1, 2
-        ORDER BY month`,
-        { s: styleCode }
-    );
-    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    return timedRead(`getStyleHistory(${styleCode})`, async () => {
+        const reader = await c.runAndReadAll(
+            `SELECT month, color, SUM(total_qty) AS qty
+                FROM gold_monthly
+            WHERE style_code = $s
+            GROUP BY 1, 2
+            ORDER BY month`,
+            { s: styleCode }
+        );
+        return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    });
 }
 
 export async function listStyles() {
     const c = await getDb();
-    const reader = await c.runAndReadAll(
-        `SELECT DISTINCT style_code, color FROM silver_inventory ORDER BY style_code`
-    );
-    return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    return timedRead("listStyles()", async () => {
+        const reader = await c.runAndReadAll(
+            `SELECT DISTINCT style_code, color FROM silver_inventory ORDER BY style_code`
+        );
+        return clean(reader.getRowObjects() as Record<string, unknown>[]);
+    });
 }
 
 // RECORDS (admin viewing / editing / deleting)

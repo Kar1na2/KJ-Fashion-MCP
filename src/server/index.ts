@@ -19,6 +19,19 @@ const BRONZE_DIR = "data/bronze";
 
 app.use(express.json({ limit: "10mb" }));
 
+// Verbose request timing for every API route. Logs when the backend receives a
+// request and how long it took to send the response — the gap between this and
+// the [db] query timing reveals overhead in auth/middleware/serialization vs.
+// the query itself.
+app.use((req, res, next) => {
+    const t0 = performance.now();
+    console.log(`[req] → ${req.method} ${req.originalUrl}`);
+    res.on("finish", () => {
+        console.log(`[req] ← ${req.method} ${req.originalUrl} ${res.statusCode} in ${(performance.now() - t0).toFixed(1)}ms`);
+    });
+    next();
+});
+
 mkdirSync(resolve(BRONZE_DIR), { recursive: true });
 
 // Configure multer to keep the uploaded file in memory (as a Buffer of bytes)

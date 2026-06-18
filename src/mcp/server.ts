@@ -6,6 +6,27 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getWeeklyTrend, getMonthlyTrend, getYearlyTrend, getStyleHistory, listStyles } from "./queries.js";
 
+// Verbose per-tool timing. Logs the moment a tool is invoked, how long its
+// underlying query took, and the size of the payload — so a slow tool call can
+// be traced to this layer vs. the HTTP/backend/DB layers downstream (each of
+// which logs its own steps). All logs go to stderr so they don't corrupt the
+// stdio/HTTP transport.
+async function runTool<T>(name: string, args: unknown, fn: () => Promise<T>) {
+    const t0 = performance.now();
+    console.error(`[mcp] → ${name} called with ${JSON.stringify(args)}`);
+    try {
+        const data = await fn();
+        const ms = performance.now() - t0;
+        const text = JSON.stringify(data, null, 2);
+        console.error(`[mcp] ✓ ${name} completed in ${ms.toFixed(1)}ms (${text.length} bytes)`);
+        return { content: [{ type: "text" as const, text }] };
+    } catch (err) {
+        const ms = performance.now() - t0;
+        console.error(`[mcp] ✗ ${name} failed after ${ms.toFixed(1)}ms: ${(err as Error).message}`);
+        throw err;
+    }
+}
+
 function createServer() {
     const server = new McpServer({ name: "illb-inventory", version: "1.0.0" });
 
@@ -20,10 +41,8 @@ function createServer() {
                 end_date: z.string().describe("Saturday the last week ends, inclusive, e.g. '2026-06-13'"),
             },
         },
-        async ({ start_date, end_date }) => {
-            const data = await getWeeklyTrend(start_date, end_date);
-            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-        }
+        async ({ start_date, end_date }) =>
+            runTool("get_weekly_trend", { start_date, end_date }, () => getWeeklyTrend(start_date, end_date))
     );
 
     server.registerTool(
@@ -37,10 +56,8 @@ function createServer() {
                 month: z.number().describe("The month number 1-12, e.g. 6 for June"),
             },
         },
-        async ({ year, month }) => {
-            const data = await getMonthlyTrend(year, month);
-            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-        }
+        async ({ year, month }) =>
+            runTool("get_monthly_trend", { year, month }, () => getMonthlyTrend(year, month))
     );
 
     server.registerTool(
@@ -51,10 +68,8 @@ function createServer() {
                 "Returns monthly inventory quantities for a given year, broken down by style code and color. Use this for questions about trends over a year, e.g. 'how did stock change in 2025'.",
             inputSchema: { year: z.number().describe("The year, e.g. 2025") },
         },
-        async ({ year }) => {
-            const data = await getYearlyTrend(year);
-            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-        }
+        async ({ year }) =>
+            runTool("get_yearly_trend", { year }, () => getYearlyTrend(year))
     );
 
     server.registerTool(
@@ -65,10 +80,8 @@ function createServer() {
                 "Returns the full monthly history for one style code across all years and colors. Use when the user asks about a specific style like '5141325'.",
             inputSchema: { style_code: z.string().describe("The style code, e.g. '5141325'") },
         },
-        async ({ style_code }) => {
-            const data = await getStyleHistory(style_code);
-            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-        }
+        async ({ style_code }) =>
+            runTool("get_style_history", { style_code }, () => getStyleHistory(style_code))
     );
 
     server.registerTool(
@@ -79,10 +92,8 @@ function createServer() {
                 "Lists every style code and color present in the inventory. Call this first if you're unsure what styles exist before answering a question.",
             inputSchema: {},
         },
-        async () => {
-            const data = await listStyles();
-            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-        }
+        async () =>
+            runTool("list_styles", {}, () => listStyles())
     );
 
     return server;
