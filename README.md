@@ -65,3 +65,6 @@ Vite will also be my frontend just because of it's simplicity in setting up and 
 
 - Currently the added feature allows for a warning to just pass when sending the checklist doesn't work, adding a feature to allow for a checklist to be sent from previous entries alongside edit and delete 
     - Adding onto this a feature where the checklist now doesn't send to a set email but allows for flexibility in which email to send to
+
+- Bug: the weeks aren't showing up in the /api properly 
+    - details: "iso.split is not a function or its return value is not iterable" 
